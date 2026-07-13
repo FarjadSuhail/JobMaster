@@ -1,0 +1,16 @@
+# Reverse proxy for the production deployment (see docs/deployment-plan.md).
+# Terminates HTTPS (automatic Let's Encrypt cert) and gates the whole app
+# behind Basic Auth, since JobMaster itself has no login system — it's a
+# single-user app, so one shared username/password in front is the right size
+# of solution rather than building real accounts into the backend.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+	reverse_proxy frontend:80
+}

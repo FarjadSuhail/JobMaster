@@ -1,0 +1,160 @@
+import { useEffect, useState } from 'react'
+import { api } from '../api'
+import CvPreview from '../components/CvPreview'
+import { formatCost } from './UsagePage'
+
+function kindLabel(kind) {
+  return kind === 'CV' ? 'CV' : 'Cover letter'
+}
+
+export default function HistoryPage() {
+  const [items, setItems] = useState(null)
+  const [selected, setSelected] = useState(null)
+  const [detail, setDetail] = useState(null)
+  const [error, setError] = useState(null)
+  const [showJd, setShowJd] = useState(false)
+
+  useEffect(() => {
+    api
+      .generations()
+      .then(setItems)
+      .catch((err) => setError(err.message))
+  }, [])
+
+  useEffect(() => {
+    if (selected == null) return
+    setDetail(null)
+    setShowJd(false)
+    api
+      .generation(selected)
+      .then(setDetail)
+      .catch((err) => setError(err.message))
+  }, [selected])
+
+  if (error) return <div className="banner error">{error}</div>
+  if (!items) return <div className="placeholder">Loading history…</div>
+  if (items.length === 0)
+    return (
+      <div className="placeholder">
+        Nothing generated yet. Tailor your first CV in the <b>Generate</b> tab — every
+        CV and cover letter lands here, tied to the job you made it for.
+      </div>
+    )
+
+  return (
+    <div className="history-layout">
+      <table className="history-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Type</th>
+            <th>Job</th>
+            <th>Company</th>
+            <th>Model</th>
+            <th>Cost</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((g) => (
+            <tr
+              key={g.id}
+              className={selected === g.id ? 'selected' : ''}
+              onClick={() => setSelected(g.id)}
+            >
+              <td>{g.id}</td>
+              <td>
+                <span className={`chip ${g.kind === 'CV' ? 'matched' : 'added'}`}>
+                  {kindLabel(g.kind)}
+                </span>
+              </td>
+              <td>{g.jobTitle || '—'}</td>
+              <td>{g.company || '—'}</td>
+              <td className="muted">
+                {g.provider}/{g.model}
+              </td>
+              <td className="muted">{formatCost(g.costUsd)}</td>
+              <td className="muted">{new Date(g.createdAt).toLocaleString()}</td>
+              <td>
+                <a
+                  className="btn small"
+                  href={api.pdfUrl(g.id)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  PDF
+                </a>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {selected != null && (
+        <div className="panel detail-panel">
+          {!detail ? (
+            <div className="placeholder">Loading…</div>
+          ) : (
+            <>
+              <div className="result-head">
+                <h2>
+                  {kindLabel(detail.kind)} <span className="muted">#{detail.id}</span>
+                  {detail.jobTitle && (
+                    <span className="muted">
+                      {' '}
+                      — {detail.jobTitle}
+                      {detail.company ? ` @ ${detail.company}` : ''}
+                    </span>
+                  )}
+                </h2>
+                <div className="btn-group">
+                  <button className="btn" onClick={() => setShowJd(!showJd)}>
+                    {showJd ? 'Hide job description' : 'Show job description'}
+                  </button>
+                  <a className="btn primary" href={api.pdfUrl(detail.id)}>
+                    Download PDF
+                  </a>
+                </div>
+              </div>
+              {showJd && <pre className="letter-text jd">{detail.jobDescription}</pre>}
+              {detail.kind === 'CV' ? (
+                <>
+                  {(detail.cv?.atsScore != null || detail.cv?.keywordsMissing?.length > 0) && (
+                    <div className="keywords">
+                      {detail.cv.atsScore != null && (
+                        <span
+                          className={`ats-badge ${detail.cv.atsScore >= 85 ? 'good' : detail.cv.atsScore >= 70 ? 'ok' : 'low'}`}
+                        >
+                          ATS {detail.cv.atsScore}
+                        </span>
+                      )}
+                      {detail.cv.keywordsMissing?.map((k) => (
+                        <span key={k} className="chip missing">
+                          ✕ {k}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {detail.cv?.tailoringNotes && <div className="notes">{detail.cv.tailoringNotes}</div>}
+                  <CvPreview data={detail.cv} />
+                </>
+              ) : (
+                <pre className="letter-text">{detail.coverLetter}</pre>
+              )}
+              <div className="meta">
+                generated by {detail.provider}/{detail.model} ·{' '}
+                {new Date(detail.createdAt).toLocaleString()}
+                {detail.promptTokens != null && (
+                  <> · {(detail.promptTokens + detail.completionTokens).toLocaleString()} tokens</>
+                )}
+                {detail.costUsd != null && <> · {formatCost(detail.costUsd)}</>}
+                {detail.location && <> · location on document: {detail.location}</>}
+                {detail.applicationId && <> · application #{detail.applicationId}</>}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

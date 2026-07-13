@@ -1,0 +1,82 @@
+@font-face {
+  font-family: 'Carlito';
+  src: url('/fonts/Carlito-Regular.ttf') format('truetype');
+  font-weight: 400;
+}
+@font-face {
+  font-family: 'Carlito';
+  src: url('/fonts/Carlito-Bold.ttf') format('truetype');
+  font-weight: 700;
+}
+
+:root {
+  --blue: #1c4587;
+  --link: #1155cc;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --bg: #f5f6f8;
+  --panel: #ffffff;
+  --border: #e2e5ea;
+  --green-bg: #e7f2ea;
+  --green-text: #1e6b3a;
+  --amber-bg: #fdf3dc;
+  --amber-text: #8a6100;
+  --red-bg: #fdeaea;
+  --red-text: #a12622;
+  --shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+  --sans: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  color: var(--blue);
+}
+
+a {
+  color: var(--link);
+}
+
+code {
+  background: #eef1f5;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #fff;
+  width: 100%;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: 2px solid rgba(17, 85, 204, 0.35);
+  border-color: var(--link);
+}
+
+textarea {
+  resize: vertical;
+}

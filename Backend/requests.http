@@ -1,0 +1,167 @@
+### JobMaster API — run these from IntelliJ's HTTP client (or copy as curl).
+### Start the app first: ./gradlew bootRun
+### (add --args='--spring.profiles.active=mock' to test without spending credits)
+
+### Health — shows active AI provider/model and whether a profile exists
+GET http://localhost:8080/api/health
+
+### Get stored profile
+GET http://localhost:8080/api/profile
+
+### Store/update the master profile (fill in your own data — or use the Profile tab).
+### This is the single source of truth the AI tailors from — keep it current.
+PUT http://localhost:8080/api/profile
+Content-Type: application/json
+
+{
+  "fullName": "Max Mustermann",
+  "email": "max.mustermann@example.com",
+  "phone": "+49 170 0000000",
+  "location": "Berlin, Germany",
+  "links": {
+    "LinkedIn": "https://linkedin.com/in/example"
+  },
+  "headline": "Software Engineer",
+  "summary": "Backend engineer building Java microservices and REST APIs.",
+  "skills": {
+    "Languages": ["Java", "Python"],
+    "Frameworks": ["Spring Boot", "React"],
+    "Tools": ["Docker", "PostgreSQL", "AWS"]
+  },
+  "experiences": [
+    {
+      "company": "Example Tech GmbH",
+      "title": "Software Engineer",
+      "team": null,
+      "location": "Berlin, Germany",
+      "startDate": "Jan 2023",
+      "endDate": "Present",
+      "bullets": [
+        "Built Spring Boot microservices serving 10,000 daily users.",
+        "Cut API response times by 40% through query optimization."
+      ],
+      "technologies": ["Java", "Spring Boot", "PostgreSQL"]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Technische Universität Berlin",
+      "degree": "M.Sc. Computer Science",
+      "location": "Berlin, Germany",
+      "startDate": "Oct 2020",
+      "endDate": "Sep 2022",
+      "highlights": []
+    }
+  ],
+  "projects": [],
+  "certifications": [],
+  "languages": ["English (C1)", "German (B1)"]
+}
+
+### Tailor CV to a job description (one-page output).
+### location: overrides the profile location on this document only.
+### applicationId: attach to a board application; omit to auto-create one.
+POST http://localhost:8080/api/cv
+Content-Type: application/json
+
+{
+  "jobTitle": "Backend Engineer",
+  "company": "TechCo",
+  "location": "Berlin, Germany",
+  "jobDescription": "Paste the full job description here...",
+  "extraInstructions": ""
+}
+
+### Generate a cover letter (cvGenerationId = id returned by POST /api/cv;
+### the letter then attaches to the same application as that CV)
+POST http://localhost:8080/api/cover-letter
+Content-Type: application/json
+
+{
+  "jobTitle": "Backend Engineer",
+  "company": "TechCo",
+  "location": "Berlin, Germany",
+  "jobDescription": "Paste the full job description here...",
+  "tone": "professional",
+  "cvGenerationId": 1
+}
+
+### List all generations (newest first) — your per-job application history
+GET http://localhost:8080/api/generations
+
+### Get one generation with full content
+GET http://localhost:8080/api/generations/1
+
+### Download a generation as a one-page PDF (works for CV and cover letter)
+GET http://localhost:8080/api/generations/1/pdf
+
+### ---------- Application tracker (the Kanban board) ----------
+
+### Add a job to the board (status starts as SAVED)
+POST http://localhost:8080/api/applications
+Content-Type: application/json
+
+{
+  "jobTitle": "Backend Engineer",
+  "company": "TechCo",
+  "location": "Berlin, Germany",
+  "jobDescription": "Paste the job description here...",
+  "jobUrl": "https://example.com/jobs/123",
+  "salary": "70-80k €",
+  "contactPerson": "Jane Doe",
+  "notes": "referred by Alex"
+}
+
+### List all applications with their documents
+GET http://localhost:8080/api/applications
+
+### Get one application
+GET http://localhost:8080/api/applications/1
+
+### Update any subset of fields; moving status to APPLIED sets appliedAt automatically.
+### Statuses: SAVED | APPLIED | INTERVIEWING | OFFER | REJECTED
+PATCH http://localhost:8080/api/applications/1
+Content-Type: application/json
+
+{
+  "status": "APPLIED",
+  "notes": "sent via portal"
+}
+
+### Delete an application (also deletes its generated documents)
+DELETE http://localhost:8080/api/applications/1
+
+### Token & cost usage report (totals + per-month + per-model)
+GET http://localhost:8080/api/usage
+
+### ---------- Job watcher ----------
+
+### Watched companies (SAP, Delivery Hero, EGYM seeded on first start)
+GET http://localhost:8080/api/watch/companies
+
+### Watch a new company (adapter configs:
+###   SMARTRECRUITERS {"companyId": "..."} | PERSONIO {"host": "acme.jobs.personio.de"}
+###   SUCCESSFACTORS {"baseUrl": "...", "listPath": "/go/.../12345/", "maxPages": 10})
+POST http://localhost:8080/api/watch/companies
+Content-Type: application/json
+
+{
+  "name": "Acme",
+  "adapterType": "PERSONIO",
+  "configJson": "{\"host\": \"acme.jobs.personio.de\"}",
+  "includeKeywords": "software|developer|engineer|backend|java",
+  "locations": "germany|munich|remote"
+}
+
+### Check all enabled companies now
+POST http://localhost:8080/api/watch/run
+
+### Recent run log
+GET http://localhost:8080/api/watch/runs
+
+### New postings feed (status=NEW | ALL | SEEN | DISMISSED | CONVERTED)
+GET http://localhost:8080/api/jobs?status=NEW
+
+### Turn a posting into a board application / dismiss it
+POST http://localhost:8080/api/jobs/1/convert
+POST http://localhost:8080/api/jobs/1/dismiss

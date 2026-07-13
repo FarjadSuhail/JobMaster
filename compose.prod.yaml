@@ -1,0 +1,30 @@
+# Production overlay — adds Caddy as the sole public-facing service.
+# Use together with the base file, never alone:
+#   docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+#
+# Everything else (postgres/backend/frontend) is unchanged; their ports in
+# compose.yaml already default to 127.0.0.1-only, so only Caddy is reachable
+# from the internet. See docs/deployment-plan.md for the full server setup.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH}
+    depends_on:
+      - frontend
+
+volumes:
+  caddy_data:
+  caddy_config:

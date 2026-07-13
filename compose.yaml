@@ -1,0 +1,67 @@
+# JobMaster — full stack. One-time setup:  docker compose up -d --build
+# After that, start/stop the "jobmaster" stack from Docker Desktop.
+# All knobs live in the .env file next to this one (see README.md).
+#
+# Deploying to the internet? See docs/deployment-plan.md — run with
+# `docker compose -f compose.yaml -f compose.prod.yaml up -d --build` instead,
+# which adds a Caddy reverse proxy (HTTPS + login) as the only public-facing
+# service. That's also why every port below binds to 127.0.0.1 by default:
+# postgres/backend/frontend should never be reachable directly, only through
+# Caddy. (Set BIND_ADDRESS=0.0.0.0 in .env for local-network access in dev,
+# e.g. testing from your phone on the same WiFi.)
+
+name: jobmaster
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-jobmaster}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # 5433 on the host to avoid clashing with any local Postgres on 5432
+      - "${BIND_ADDRESS:-127.0.0.1}:${POSTGRES_HOST_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-jobmaster}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./Backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-jobmaster}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-5}
+      # set SPRING_PROFILES_ACTIVE=mock in .env to test without an API key
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      DASHBOARD_START_DATE: ${DASHBOARD_START_DATE:-2026-07-08}
+      TZ: ${TZ:-Europe/Berlin}
+      WATCHER_CRON: ${WATCHER_CRON:-0 0 11 * * *}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8080}:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-5173}:80"
+
+volumes:
+  pgdata:

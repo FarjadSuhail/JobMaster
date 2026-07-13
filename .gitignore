@@ -1,0 +1,13 @@
+# Secrets — never commit real values. .env.example documents the shape.
+.env
+
+# IDE / OS
+.idea/
+.DS_Store
+
+# Local database volumes if ever run outside Docker
+Backend/data/
+
+# Caddy's local runtime state (only relevant if compose.prod.yaml is run outside Docker volumes)
+caddy_data/
+caddy_config/
