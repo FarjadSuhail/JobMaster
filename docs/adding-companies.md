@@ -83,7 +83,7 @@ identifier is the #1 reason a new company shows 0 postings.
    - SuccessFactors: `{"baseUrl": "https://jobs.sap.com", "listPath": "/go/SAP-Jobs-in-Germany/539599/", "maxPages": 10}`
 5. **Include keywords**: pipe-separated words; a job title must contain at
    least one to show up. Working example used by the other companies:
-   `software|developer|backend|full stack|fullstack|full-stack|java|cloud|devops`
+   `            "software|developer|engineer|backend|full stack|fullstack|full-stack|angular|react|vue|node|node.js|python|nest|nest.js|cloud|aws|gcp|azure|docker|kubernetes|devops"`
    Leave empty to get every posting.
 6. **Exclude keywords**: titles containing any of these are dropped, e.g.
    `intern|working student|thesis`.
