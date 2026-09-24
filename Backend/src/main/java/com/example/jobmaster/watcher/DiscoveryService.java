@@ -37,7 +37,7 @@ public class DiscoveryService {
 
     /** Standard title filters for bulk/auto-added companies. */
     public static final String DEFAULT_INCLUDE_KEYWORDS =
-            "software|developer|engineer|backend|full stack|fullstack|full-stack|java|cloud|devops";
+            "software|developer|engineer|backend|full stack|fullstack|full-stack|angular|react|vue|node|node.js|python|nest|nest.js|cloud|aws|gcp|azure|docker|kubernetes|devops";
 
     private static final Logger log = LoggerFactory.getLogger(DiscoveryService.class);
     private static final int PROBE_THREADS = 12;
@@ -107,28 +107,77 @@ public class DiscoveryService {
     // ---------- probing ----------
 
     private DiscoveryHit probe(String name, Map<String, String> watched) {
-        String slug = name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
-        String srId = name.replaceAll("[^A-Za-z0-9]", "");
-        if (slug.isBlank()) {
+        if (name == null || name.isBlank()) {
             return null;
         }
 
-        Long count = probeGreenhouse(slug);
-        if (count != null) {
-            return hit(name, AdapterType.GREENHOUSE, slug,
-                    "{\"boardToken\": \"" + slug + "\"}", count, watched);
+        List<String> slugs = candidateSlugs(name);
+        List<String> smartRecruiterIds = candidateSmartRecruiterIds(name);
+
+        for (String slug : slugs) {
+            Long count = probeGreenhouse(slug);
+            if (count != null) {
+                return hit(name, AdapterType.GREENHOUSE, slug,
+                        "{\"boardToken\": \"" + slug + "\"}", count, watched);
+            }
         }
-        count = probeSmartRecruiters(srId);
-        if (count != null) {
-            return hit(name, AdapterType.SMARTRECRUITERS, srId,
-                    "{\"companyId\": \"" + srId + "\"}", count, watched);
+
+        for (String srId : smartRecruiterIds) {
+            Long count = probeSmartRecruiters(srId);
+            if (count != null) {
+                return hit(name, AdapterType.SMARTRECRUITERS, srId,
+                        "{\"companyId\": \"" + srId + "\"}", count, watched);
+            }
         }
-        count = probeAshby(slug);
-        if (count != null) {
-            return hit(name, AdapterType.ASHBY, slug,
-                    "{\"jobBoardName\": \"" + slug + "\"}", count, watched);
+
+        for (String slug : slugs) {
+            Long count = probeAshby(slug);
+            if (count != null) {
+                return hit(name, AdapterType.ASHBY, slug,
+                        "{\"jobBoardName\": \"" + slug + "\"}", count, watched);
+            }
         }
         return null;
+    }
+
+    private List<String> candidateSlugs(String name) {
+        String normalized = name.trim().toLowerCase(Locale.ROOT);
+        String compact = normalized.replaceAll("[^a-z0-9]", "");
+        String withSpaces = normalized.replaceAll("[^a-z0-9]+", "-");
+        String noAnd = normalized.replace(" and ", "").replaceAll("[^a-z0-9]+", "-");
+        String noInc = normalized.replace(" inc", "").replaceAll("[^a-z0-9]+", "-");
+        String noLtd = normalized.replace(" ltd", "").replaceAll("[^a-z0-9]+", "-");
+
+        List<String> values = new ArrayList<>();
+        values.add(compact);
+        values.add(withSpaces);
+        values.add(noAnd);
+        values.add(noInc);
+        values.add(noLtd);
+        values.add(normalized.replaceAll("[^a-z0-9]+", ""));
+        values.add(normalized.replaceAll("\\s+", ""));
+
+        return values.stream().filter(s -> !s.isBlank()).distinct().toList();
+    }
+
+    private List<String> candidateSmartRecruiterIds(String name) {
+        String compact = name.replaceAll("[^A-Za-z0-9]", "");
+        String noSpaces = name.replaceAll("\\s+", "");
+        String noAmpersand = name.replace("&", "");
+        String noAnd = name.replace(" and ", "").replaceAll("\\s+", "");
+        String noInc = name.replace(" Inc", "").replaceAll("\\s+", "");
+        String noLtd = name.replace(" Ltd", "").replaceAll("\\s+", "");
+
+        List<String> values = new ArrayList<>();
+        values.add(compact);
+        values.add(noSpaces);
+        values.add(noAmpersand);
+        values.add(noAnd);
+        values.add(noInc);
+        values.add(noLtd);
+        values.add(name.trim());
+
+        return values.stream().filter(s -> !s.isBlank()).distinct().toList();
     }
 
     private DiscoveryHit hit(String name, AdapterType type, String identifier,
